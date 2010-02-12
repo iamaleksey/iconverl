@@ -4,7 +4,7 @@ Erlang libiconv binding (uses the new NIF api).
 
 Assuming that you have the latest OTP trunk built in ../otp:
 
-  make compile
+  make
 
 # Usage
 
