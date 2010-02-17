@@ -16,14 +16,10 @@ erl_iconv_open(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[]) {
     }
 
     if (!enif_inspect_binary(env, argv[1], &from)) {
-        enif_release_binary(env, &to);
         return enif_make_badarg(env);
     }
 
     cd = iconv_open(to.data, from.data);
-
-    enif_release_binary(env, &to);
-    enif_release_binary(env, &from);
 
     if (cd == (iconv_t) -1) {
         return enif_make_badarg(env);
@@ -80,7 +76,6 @@ erl_iconv(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[]) {
     do {
         rc = iconv(cd, &in, &inleft, &out, &outleft);
         if (rc == 0) { // done.
-            enif_release_binary(env, &orig_bin);
             if (outleft > 0) { // trim.
                 enif_realloc_binary(env, &conv_bin, outsize - outleft);
             }
@@ -93,7 +88,6 @@ erl_iconv(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[]) {
             enif_realloc_binary(env, &conv_bin, outsize);
             out = conv_bin.data + (outsize - outleft);
         } else { // other error.
-            enif_release_binary(env, &orig_bin);
             enif_release_binary(env, &conv_bin);
             if      (errno == EILSEQ) { err = "eilseq";   }
             else if (errno == EINVAL) { err = "einval";   }
@@ -115,13 +109,10 @@ extract_cd(ErlNifEnv* env, ERL_NIF_TERM binary) {
     }
 
     if (cd_binary.size != sizeof(iconv_t)) {
-        enif_release_binary(env, &cd_binary);
         return (iconv_t) -1;
     }
 
     memcpy(&cd, cd_binary.data, sizeof(iconv_t));
-
-    enif_release_binary(env, &cd_binary);
 
     return cd;
 }
