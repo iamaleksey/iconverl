@@ -6,4 +6,4 @@ clean:
 	rm priv/*.so ebin/*.beam
 
 run:
-	../otp/bin/erl -pa ebin
+	../otp/bin/erl -pa ../iconverl/ebin

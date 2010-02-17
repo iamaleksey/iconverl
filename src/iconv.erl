@@ -14,4 +14,5 @@ iconv(CD, Binary) ->
   erlang:error(function_clause, [CD, Binary]).
 
 load_nif() ->
-  erlang:load_nif("./priv/iconv", 0).
+  Path = filename:join(code:priv_dir(iconverl), "iconv"),
+  erlang:load_nif(Path, 0).
