@@ -1,14 +1,16 @@
 Erlang libiconv binding (uses the new NIF api).
 
-# Installation
+# Compiling
 
-Assuming that you have the latest OTP trunk built in ../otp:
+Set ERL_TOP environment variable and run make:
 
+  export ERL_TOP=/path/to/otp/clone
   make
 
-# Usage
 
-  make run
+# Using
+
+  make shell
 
   Eshell V5.7.5  (abort with ^G)
   1> CD = iconv:open(<<"ucs-2be">>, <<"utf-8">>).
