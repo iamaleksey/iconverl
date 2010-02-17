@@ -3,13 +3,15 @@
 #include <errno.h>
 #include <string.h>
 
-static iconv_t extract_cd(ErlNifEnv* env, ERL_NIF_TERM binary);
+static ErlNifResourceType *iconv_cd_type;
+
+typedef struct { iconv_t cd; } iconv_cd;
 
 static ERL_NIF_TERM
 erl_iconv_open(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[]) {
     ErlNifBinary to, from;
-    iconv_t cd;
-    ErlNifBinary cd_binary;
+    iconv_cd *cd;
+    ERL_NIF_TERM result;
 
     if (!enif_inspect_binary(env, argv[0], &to)) {
         return enif_make_badarg(env);
@@ -19,27 +21,19 @@ erl_iconv_open(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[]) {
         return enif_make_badarg(env);
     }
 
-    cd = iconv_open(to.data, from.data);
+    cd = enif_alloc_resource(env, iconv_cd_type, sizeof(iconv_cd));
 
-    if (cd == (iconv_t) -1) {
+    cd->cd = iconv_open(to.data, from.data);
+
+    if (cd->cd == (iconv_t) -1) {
+        enif_release_resource(env, cd);
         return enif_make_badarg(env);
     }
 
-    enif_alloc_binary(env, sizeof(iconv_t), &cd_binary);
-    memcpy(cd_binary.data, &cd, sizeof(iconv_t));
+    result = enif_make_resource(env, cd);
+    enif_release_resource(env, cd);
 
-    return enif_make_binary(env, &cd_binary);
-}
-
-static ERL_NIF_TERM
-erl_iconv_close(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[]) {
-    iconv_t cd = extract_cd(env, argv[0]);
-
-    if ((cd == (iconv_t) -1) || (iconv_close(cd) != 0)) {
-        return enif_make_badarg(env);
-    }
-
-    return enif_make_atom(env, "ok");
+    return result;
 }
 
 // TODO: handle alloc/realloc failures.
@@ -49,12 +43,11 @@ erl_iconv(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[]) {
     size_t inleft, outleft, outsize;
     char *in, *out;
     char *err;
-    ERL_NIF_TERM ok, error, result;
     size_t rc = -1;
+    ERL_NIF_TERM ok, error, result;
+    iconv_cd *cd;
 
-    iconv_t cd = extract_cd(env, argv[0]);
-
-    if (cd == (iconv_t) -1) {
+    if(!enif_get_resource(env, argv[0], iconv_cd_type, (void **) &cd)) {
         return enif_make_badarg(env);
     }
 
@@ -71,10 +64,10 @@ erl_iconv(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[]) {
     enif_alloc_binary(env, outsize, &conv_bin);
     out = conv_bin.data;
 
-    iconv(cd, NULL, NULL, NULL, NULL);
+    iconv(cd->cd, NULL, NULL, NULL, NULL);
 
     do {
-        rc = iconv(cd, &in, &inleft, &out, &outleft);
+        rc = iconv(cd->cd, &in, &inleft, &out, &outleft);
         if (rc == 0) { // done.
             if (outleft > 0) { // trim.
                 enif_realloc_binary(env, &conv_bin, outsize - outleft);
@@ -99,28 +92,21 @@ erl_iconv(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[]) {
     } while (rc != 0);
 }
 
-static iconv_t
-extract_cd(ErlNifEnv* env, ERL_NIF_TERM binary) {
-    ErlNifBinary cd_binary;
-    iconv_t cd;
-
-    if (!enif_inspect_binary(env, binary, &cd_binary)) {
-        return (iconv_t) -1;
-    }
-
-    if (cd_binary.size != sizeof(iconv_t)) {
-        return (iconv_t) -1;
-    }
-
-    memcpy(&cd, cd_binary.data, sizeof(iconv_t));
-
-    return cd;
-}
-
 static ErlNifFunc nif_funcs[] = {
     {"open",  2, erl_iconv_open},
-    {"close", 1, erl_iconv_close},
-    {"iconv", 2, erl_iconv}
+    {"conv", 2, erl_iconv}
 };
 
-ERL_NIF_INIT(iconv, nif_funcs, NULL, NULL, NULL, NULL)
+static void
+gc_iconv_cd(ErlNifEnv* env, void* cd) {
+    iconv_close(((iconv_cd *) cd)->cd);
+}
+
+static int
+load(ErlNifEnv* env, void** priv, ERL_NIF_TERM load_info) {
+    iconv_cd_type = enif_open_resource_type(env, "iconv_cd_type",
+        gc_iconv_cd, ERL_NIF_RT_CREATE, NULL);
+    return 0;
+}
+
+ERL_NIF_INIT(iconv, nif_funcs, load, NULL, NULL, NULL)
