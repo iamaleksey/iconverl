@@ -18,21 +18,21 @@ static struct {
 
 static ERL_NIF_TERM
 erl_iconv_open(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[]) {
-    ErlNifBinary to, from;
+    char to[32], from[32];
     iconv_cd *cd;
     ERL_NIF_TERM result;
 
-    if (!enif_inspect_binary(env, argv[0], &to)) {
+    if (!enif_get_string(env, argv[0], to, 32, ERL_NIF_LATIN1)) {
         return enif_make_badarg(env);
     }
 
-    if (!enif_inspect_binary(env, argv[1], &from)) {
+    if (!enif_get_string(env, argv[1], from, 32, ERL_NIF_LATIN1)) {
         return enif_make_badarg(env);
     }
 
     cd = enif_alloc_resource(env, iconv_cd_type, sizeof(iconv_cd));
 
-    cd->cd = iconv_open(to.data, from.data);
+    cd->cd = iconv_open(to, from);
 
     if (cd->cd == (iconv_t) -1) {
         enif_release_resource(env, cd);
