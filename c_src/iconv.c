@@ -21,8 +21,10 @@
  */
 
 #include "erl_nif.h"
+
 #include <iconv.h>
 #include <errno.h>
+#include <assert.h>
 #include <string.h>
 
 static ErlNifResourceType *iconv_cd_type = NULL;
@@ -37,6 +39,33 @@ static struct {
     ERL_NIF_TERM einval;
     ERL_NIF_TERM eunknown;
 } iconv_atoms;
+
+static void
+gc_iconv_cd(ErlNifEnv* env, void* cd) {
+    iconv_close(((iconv_cd *) cd)->cd);
+}
+
+static int
+load(ErlNifEnv* env, void** priv, ERL_NIF_TERM load_info) {
+    ErlNifResourceType* rt = enif_open_resource_type(env, "iconv_cd_type",
+        gc_iconv_cd, ERL_NIF_RT_CREATE, NULL);
+
+    if (rt == NULL) {
+        return -1;
+    }
+
+    assert(iconv_cd_type == NULL);
+    iconv_cd_type = rt;
+
+    iconv_atoms.ok       = enif_make_atom(env, "ok");
+    iconv_atoms.error    = enif_make_atom(env, "error");
+    iconv_atoms.enomem   = enif_make_atom(env, "enomem");
+    iconv_atoms.eilseq   = enif_make_atom(env, "eilseq");
+    iconv_atoms.einval   = enif_make_atom(env, "einval");
+    iconv_atoms.eunknown = enif_make_atom(env, "eunknown");
+
+    return 0;
+}
 
 static ERL_NIF_TERM
 erl_iconv_open(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[]) {
@@ -128,25 +157,5 @@ static ErlNifFunc nif_funcs[] = {
     {"open", 2, erl_iconv_open},
     {"conv", 2, erl_iconv}
 };
-
-static void
-gc_iconv_cd(ErlNifEnv* env, void* cd) {
-    iconv_close(((iconv_cd *) cd)->cd);
-}
-
-static int
-load(ErlNifEnv* env, void** priv, ERL_NIF_TERM load_info) {
-    iconv_cd_type = enif_open_resource_type(env, "iconv_cd_type",
-        gc_iconv_cd, ERL_NIF_RT_CREATE, NULL);
-
-    iconv_atoms.ok       = enif_make_atom(env, "ok");
-    iconv_atoms.error    = enif_make_atom(env, "error");
-    iconv_atoms.enomem   = enif_make_atom(env, "enomem");
-    iconv_atoms.eilseq   = enif_make_atom(env, "eilseq");
-    iconv_atoms.einval   = enif_make_atom(env, "einval");
-    iconv_atoms.eunknown = enif_make_atom(env, "eunknown");
-
-    return 0;
-}
 
 ERL_NIF_INIT(iconv, nif_funcs, load, NULL, NULL, NULL)
