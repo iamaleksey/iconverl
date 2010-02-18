@@ -46,7 +46,7 @@ erl_iconv(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[]) {
     iconv_cd *cd;
     ERL_NIF_TERM ok, error, result;
 
-    if(!enif_get_resource(env, argv[0], iconv_cd_type, (void **) &cd)) {
+    if (!enif_get_resource(env, argv[0], iconv_cd_type, (void **) &cd)) {
         return enif_make_badarg(env);
     }
 
