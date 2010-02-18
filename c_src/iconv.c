@@ -36,16 +36,15 @@ erl_iconv_open(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[]) {
     return result;
 }
 
-// TODO: handle alloc/realloc failures.
 static ERL_NIF_TERM
 erl_iconv(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[]) {
     ErlNifBinary orig_bin, conv_bin;
     size_t inleft, outleft, outsize;
     char *in, *out;
     char *err;
-    size_t rc = -1;
-    ERL_NIF_TERM ok, error, result;
+    size_t rc;
     iconv_cd *cd;
+    ERL_NIF_TERM ok, error, result;
 
     if(!enif_get_resource(env, argv[0], iconv_cd_type, (void **) &cd)) {
         return enif_make_badarg(env);
@@ -61,7 +60,12 @@ erl_iconv(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[]) {
     outsize = inleft;
     outleft = outsize;
 
-    enif_alloc_binary(env, outsize, &conv_bin);
+    if (!enif_alloc_binary(env, outsize, &conv_bin)) {
+        error = enif_make_atom(env, "error");
+        result = enif_make_atom(env, "enomem");
+        return enif_make_tuple(env, 2, error, result);
+    }
+
     out = conv_bin.data;
 
     iconv(cd->cd, NULL, NULL, NULL, NULL);
@@ -78,9 +82,14 @@ erl_iconv(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[]) {
         } else if (errno == E2BIG) { // double the binary.
             outleft += outsize;
             outsize *= 2;
-            enif_realloc_binary(env, &conv_bin, outsize);
+            if (!enif_realloc_binary(env, &conv_bin, outsize)) {
+                enif_release_binary(env, &conv_bin);
+                error = enif_make_atom(env, "error");
+                result = enif_make_atom(env, "enomem");
+                return enif_make_tuple(env, 2, error, result);
+            }
             out = conv_bin.data + (outsize - outleft);
-        } else { // other error.
+        } else { // another error.
             enif_release_binary(env, &conv_bin);
             if      (errno == EILSEQ) { err = "eilseq";   }
             else if (errno == EINVAL) { err = "einval";   }
@@ -93,7 +102,7 @@ erl_iconv(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[]) {
 }
 
 static ErlNifFunc nif_funcs[] = {
-    {"open",  2, erl_iconv_open},
+    {"open", 2, erl_iconv_open},
     {"conv", 2, erl_iconv}
 };
 
