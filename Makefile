@@ -1,7 +1,12 @@
-# OS X
-#GCCFLAGS = -fPIC -shared -liconv -flat_namespace -undefined suppress -fno-common -Wall
-# Linux
+ifndef OSTYPE
+OSTYPE=$(shell uname -s|awk '{print tolower($$0)}')
+endif
+ifeq "$(OSTYPE)" "linux"
 GCCFLAGS = -fPIC -shared
+endif
+ifeq "$(OSTYPE)" "darwin"
+GCCFLAGS = -fPIC -shared -liconv -flat_namespace -undefined suppress -fno-common
+endif
 
 
 all: ebin/iconv.beam priv/iconv.so
