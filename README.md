@@ -21,7 +21,7 @@ make shell
 
 Eshell V5.7.5  (abort with ^G)
 1> CD = iconv:open(&lt;&lt;"ucs-2be"&gt;&gt;, &lt;&lt;"utf-8"&gt;&gt;).
-&lt;&lt;&gt;&gt;>>
+&lt;&lt;&gt;&gt;
 2> iconv:conv(CD, &lt;&lt;"text"&gt;&gt;).
 {ok,&lt;&lt;0,116,0,101,0,120,0,116&gt;&gt;}
 </pre>
