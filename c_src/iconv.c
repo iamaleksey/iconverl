@@ -41,12 +41,14 @@ static struct {
 } iconv_atoms;
 
 static void
-gc_iconv_cd(ErlNifEnv* env, void* cd) {
+gc_iconv_cd(ErlNifEnv* env, void* cd)
+{
     iconv_close(((iconv_cd *) cd)->cd);
 }
 
 static int
-load(ErlNifEnv* env, void** priv, ERL_NIF_TERM load_info) {
+load(ErlNifEnv* env, void** priv, ERL_NIF_TERM load_info)
+{
     ErlNifResourceType* rt = enif_open_resource_type(env, "iconv_cd_type",
         gc_iconv_cd, ERL_NIF_RT_CREATE, NULL);
 
@@ -68,7 +70,8 @@ load(ErlNifEnv* env, void** priv, ERL_NIF_TERM load_info) {
 }
 
 static ERL_NIF_TERM
-erl_iconv_open(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[]) {
+erl_iconv_open(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[])
+{
     char to[32], from[32];
     iconv_cd *cd;
     ERL_NIF_TERM result;
@@ -97,7 +100,8 @@ erl_iconv_open(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[]) {
 }
 
 static ERL_NIF_TERM
-erl_iconv(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[]) {
+erl_iconv(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[])
+{
     ErlNifBinary orig_bin, conv_bin;
     size_t inleft, outleft, outsize;
     char *in, *out;
