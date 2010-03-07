@@ -25,7 +25,6 @@
 #include <iconv.h>
 #include <errno.h>
 #include <assert.h>
-#include <string.h>
 
 static ErlNifResourceType *iconv_cd_type = NULL;
 
