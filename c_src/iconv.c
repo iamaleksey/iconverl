@@ -40,20 +40,19 @@ static struct {
 } iconv_atoms;
 
 static void
-gc_iconv_cd(ErlNifEnv* env, void* cd)
+gc_iconv_cd(ErlNifEnv *env, void *cd)
 {
     iconv_close(((iconv_cd *) cd)->cd);
 }
 
 static int
-load(ErlNifEnv* env, void** priv, ERL_NIF_TERM load_info)
+load(ErlNifEnv *env, void **priv, ERL_NIF_TERM load_info)
 {
-    ErlNifResourceType* rt = enif_open_resource_type(env, "iconv_cd_type",
+    ErlNifResourceType *rt = enif_open_resource_type(env, "iconv_cd_type",
         gc_iconv_cd, ERL_NIF_RT_CREATE, NULL);
 
-    if (rt == NULL) {
+    if (rt == NULL)
         return -1;
-    }
 
     assert(iconv_cd_type == NULL);
     iconv_cd_type = rt;
@@ -69,19 +68,17 @@ load(ErlNifEnv* env, void** priv, ERL_NIF_TERM load_info)
 }
 
 static ERL_NIF_TERM
-erl_iconv_open(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[])
+erl_iconv_open(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[])
 {
     char to[32], from[32];
     iconv_cd *cd;
     ERL_NIF_TERM result;
 
-    if (!enif_get_string(env, argv[0], to, 32, ERL_NIF_LATIN1)) {
+    if (!enif_get_string(env, argv[0], to, 32, ERL_NIF_LATIN1))
         return enif_make_badarg(env);
-    }
 
-    if (!enif_get_string(env, argv[1], from, 32, ERL_NIF_LATIN1)) {
+    if (!enif_get_string(env, argv[1], from, 32, ERL_NIF_LATIN1))
         return enif_make_badarg(env);
-    }
 
     cd = enif_alloc_resource(env, iconv_cd_type, sizeof(iconv_cd));
 
@@ -99,22 +96,20 @@ erl_iconv_open(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[])
 }
 
 static ERL_NIF_TERM
-erl_iconv(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[])
+erl_iconv(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[])
 {
     ErlNifBinary orig_bin, conv_bin;
     size_t inleft, outleft, outsize;
-    char *in, *out;
+    unsigned char *in, *out;
     size_t rc;
     iconv_cd *cd;
     ERL_NIF_TERM error, result;
 
-    if (!enif_get_resource(env, argv[0], iconv_cd_type, (void **) &cd)) {
+    if (!enif_get_resource(env, argv[0], iconv_cd_type, (void **) &cd))
         return enif_make_badarg(env);
-    }
 
-    if (!enif_inspect_binary(env, argv[1], &orig_bin)) {
+    if (!enif_inspect_binary(env, argv[1], &orig_bin))
         return enif_make_badarg(env);
-    }
 
     in = orig_bin.data;
     inleft = orig_bin.size;
@@ -122,22 +117,18 @@ erl_iconv(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[])
     outsize = inleft;
     outleft = outsize;
 
-    if (!enif_alloc_binary(env, outsize, &conv_bin)) {
+    if (!enif_alloc_binary(env, outsize, &conv_bin))
         return enif_make_tuple2(env, iconv_atoms.error, iconv_atoms.enomem);
-    }
 
     out = conv_bin.data;
 
     iconv(cd->cd, NULL, NULL, NULL, NULL);
 
     do {
-        rc = iconv(cd->cd, &in, &inleft, &out, &outleft);
+        rc = iconv(cd->cd, (char **) &in, &inleft, (char **) &out, &outleft);
+
         if (rc == 0) { // done.
-            if (outleft > 0) { // trim.
-                enif_realloc_binary(env, &conv_bin, outsize - outleft);
-            }
-            result = enif_make_binary(env, &conv_bin);
-            return enif_make_tuple2(env, iconv_atoms.ok, result);
+            break;
         } else if (errno == E2BIG) { // double the binary.
             outleft += outsize;
             outsize *= 2;
@@ -154,6 +145,12 @@ erl_iconv(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[])
             return enif_make_tuple2(env, iconv_atoms.error, error);
         }
     } while (rc != 0);
+
+    if (outleft > 0)
+        enif_realloc_binary(env, &conv_bin, outsize - outleft);
+
+    result = enif_make_binary(env, &conv_bin);
+    return enif_make_tuple2(env, iconv_atoms.ok, result);
 }
 
 static ErlNifFunc nif_funcs[] = {
