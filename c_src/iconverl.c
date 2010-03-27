@@ -127,21 +127,26 @@ erl_iconv(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[])
     do {
         rc = iconv(cd->cd, (char **) &in, &inleft, (char **) &out, &outleft);
 
-        if (rc == 0) { // done.
+        if (rc == 0)
             break;
-        } else if (errno == E2BIG) { // double the binary.
+
+        if (errno == E2BIG) { /* double the binary */
             outleft += outsize;
             outsize *= 2;
+
             if (!enif_realloc_binary(env, &conv_bin, outsize)) {
                 enif_release_binary(env, &conv_bin);
                 return enif_make_tuple2(env, iconverl_atoms.error, iconverl_atoms.enomem);
             }
+
             out = conv_bin.data + (outsize - outleft);
-        } else { // another error.
+        } else {
             enif_release_binary(env, &conv_bin);
+
             if      (errno == EILSEQ) { error = iconverl_atoms.eilseq;   }
             else if (errno == EINVAL) { error = iconverl_atoms.einval;   }
             else                      { error = iconverl_atoms.eunknown; }
+
             return enif_make_tuple2(env, iconverl_atoms.error, error);
         }
     } while (rc != 0);
@@ -150,6 +155,7 @@ erl_iconv(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[])
         enif_realloc_binary(env, &conv_bin, outsize - outleft);
 
     result = enif_make_binary(env, &conv_bin);
+
     return enif_make_tuple2(env, iconverl_atoms.ok, result);
 }
 
