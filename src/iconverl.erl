@@ -18,7 +18,7 @@
 %%% OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 %%% THE SOFTWARE.
 
--module(iconv).
+-module(iconverl).
 
 -on_load(load_nif/0).
 
@@ -34,5 +34,5 @@ conv(To, From, Binary) ->
   conv(open(To, From), Binary).
 
 load_nif() ->
-  Path = filename:join(code:priv_dir(iconverl), "iconv"),
+  Path = filename:join(code:priv_dir(iconverl), "iconverl"),
   erlang:load_nif(Path, 0).

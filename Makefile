@@ -2,22 +2,22 @@ ifndef OSTYPE
 OSTYPE=$(shell uname -s|awk '{print tolower($$0)}')
 endif
 ifeq "$(OSTYPE)" "linux"
-GCCFLAGS = -fPIC -shared
+GCCFLAGS = -fPIC -shared -Wall
 endif
 ifeq "$(OSTYPE)" "darwin"
-GCCFLAGS = -fPIC -shared -liconv -flat_namespace -undefined suppress -fno-common
+GCCFLAGS = -fPIC -shared -liconv -flat_namespace -undefined suppress -fno-common -Wall
 endif
 
 
-all: ebin/iconv.beam priv/iconv.so
+all: ebin/iconverl.beam priv/iconverl.so
 
 
-ebin/iconv.beam: src/iconv.erl
-	$(ERL_TOP)/bin/erlc -o ebin src/iconv.erl
+ebin/iconverl.beam: src/iconverl.erl
+	$(ERL_TOP)/bin/erlc -o ebin src/iconverl.erl
 
 
-priv/iconv.so: c_src/iconv.c
-	gcc $(GCCFLAGS) -I $(ERL_TOP)/erts/emulator/beam/ -o priv/iconv.so c_src/iconv.c
+priv/iconverl.so: c_src/iconverl.c
+	gcc $(GCCFLAGS) -I $(ERL_TOP)/erts/emulator/beam/ -o priv/iconverl.so c_src/iconverl.c
 
 
 shell:
@@ -25,4 +25,4 @@ shell:
 
 
 clean:
-	rm -f priv/iconv.so ebin/iconv.beam
+	rm -f priv/*.so ebin/*.beam

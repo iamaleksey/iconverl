@@ -37,7 +37,7 @@ static struct {
     ERL_NIF_TERM eilseq;
     ERL_NIF_TERM einval;
     ERL_NIF_TERM eunknown;
-} iconv_atoms;
+} iconverl_atoms;
 
 static void
 gc_iconv_cd(ErlNifEnv *env, void *cd)
@@ -57,12 +57,12 @@ load(ErlNifEnv *env, void **priv, ERL_NIF_TERM load_info)
     assert(iconv_cd_type == NULL);
     iconv_cd_type = rt;
 
-    iconv_atoms.ok       = enif_make_atom(env, "ok");
-    iconv_atoms.error    = enif_make_atom(env, "error");
-    iconv_atoms.enomem   = enif_make_atom(env, "enomem");
-    iconv_atoms.eilseq   = enif_make_atom(env, "eilseq");
-    iconv_atoms.einval   = enif_make_atom(env, "einval");
-    iconv_atoms.eunknown = enif_make_atom(env, "eunknown");
+    iconverl_atoms.ok       = enif_make_atom(env, "ok");
+    iconverl_atoms.error    = enif_make_atom(env, "error");
+    iconverl_atoms.enomem   = enif_make_atom(env, "enomem");
+    iconverl_atoms.eilseq   = enif_make_atom(env, "eilseq");
+    iconverl_atoms.einval   = enif_make_atom(env, "einval");
+    iconverl_atoms.eunknown = enif_make_atom(env, "eunknown");
 
     return 0;
 }
@@ -118,7 +118,7 @@ erl_iconv(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[])
     outleft = outsize;
 
     if (!enif_alloc_binary(env, outsize, &conv_bin))
-        return enif_make_tuple2(env, iconv_atoms.error, iconv_atoms.enomem);
+        return enif_make_tuple2(env, iconverl_atoms.error, iconverl_atoms.enomem);
 
     out = conv_bin.data;
 
@@ -134,15 +134,15 @@ erl_iconv(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[])
             outsize *= 2;
             if (!enif_realloc_binary(env, &conv_bin, outsize)) {
                 enif_release_binary(env, &conv_bin);
-                return enif_make_tuple2(env, iconv_atoms.error, iconv_atoms.enomem);
+                return enif_make_tuple2(env, iconverl_atoms.error, iconverl_atoms.enomem);
             }
             out = conv_bin.data + (outsize - outleft);
         } else { // another error.
             enif_release_binary(env, &conv_bin);
-            if      (errno == EILSEQ) { error = iconv_atoms.eilseq;   }
-            else if (errno == EINVAL) { error = iconv_atoms.einval;   }
-            else                      { error = iconv_atoms.eunknown; }
-            return enif_make_tuple2(env, iconv_atoms.error, error);
+            if      (errno == EILSEQ) { error = iconverl_atoms.eilseq;   }
+            else if (errno == EINVAL) { error = iconverl_atoms.einval;   }
+            else                      { error = iconverl_atoms.eunknown; }
+            return enif_make_tuple2(env, iconverl_atoms.error, error);
         }
     } while (rc != 0);
 
@@ -150,7 +150,7 @@ erl_iconv(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[])
         enif_realloc_binary(env, &conv_bin, outsize - outleft);
 
     result = enif_make_binary(env, &conv_bin);
-    return enif_make_tuple2(env, iconv_atoms.ok, result);
+    return enif_make_tuple2(env, iconverl_atoms.ok, result);
 }
 
 static ErlNifFunc nif_funcs[] = {
@@ -158,4 +158,4 @@ static ErlNifFunc nif_funcs[] = {
     {"conv", 2, erl_iconv}
 };
 
-ERL_NIF_INIT(iconv, nif_funcs, load, NULL, NULL, NULL)
+ERL_NIF_INIT(iconverl, nif_funcs, load, NULL, NULL, NULL)
