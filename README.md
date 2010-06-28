@@ -6,10 +6,7 @@ Erlang libiconv binding (uses the new NIF api).
 Compilation
 ===========
 
-Set ERL_TOP environment variable and run make:
-
 <pre>
-export ERL_TOP=/path/to/otp/clone
 make
 </pre>
 
@@ -17,9 +14,6 @@ Usage
 =====
 
 <pre>
-make shell
-
-Eshell V5.7.5  (abort with ^G)
 1> CD = iconverl:open("ucs-2be", "utf-8").
 &lt;&lt;&gt;&gt;
 2> iconverl:conv(CD, &lt;&lt;"text"&gt;&gt;).
