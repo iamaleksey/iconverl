@@ -48,8 +48,8 @@ gc_iconv_cd(ErlNifEnv *env, void *cd)
 static int
 load(ErlNifEnv *env, void **priv, ERL_NIF_TERM load_info)
 {
-    ErlNifResourceType *rt = enif_open_resource_type(env, "iconv_cd_type",
-        gc_iconv_cd, ERL_NIF_RT_CREATE, NULL);
+    ErlNifResourceType *rt = enif_open_resource_type(env, "iconverl",
+        "iconv_cd_type", gc_iconv_cd, ERL_NIF_RT_CREATE, NULL);
 
     if (rt == NULL)
         return -1;
@@ -80,17 +80,17 @@ erl_iconv_open(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[])
     if (!enif_get_string(env, argv[1], from, 32, ERL_NIF_LATIN1))
         return enif_make_badarg(env);
 
-    cd = enif_alloc_resource(env, iconv_cd_type, sizeof(iconv_cd));
+    cd = enif_alloc_resource(iconv_cd_type, sizeof(iconv_cd));
 
     cd->cd = iconv_open(to, from);
 
     if (cd->cd == (iconv_t) -1) {
-        enif_release_resource(env, cd);
+        enif_release_resource(cd);
         return enif_make_badarg(env);
     }
 
     result = enif_make_resource(env, cd);
-    enif_release_resource(env, cd);
+    enif_release_resource(cd);
 
     return result;
 }
@@ -117,7 +117,7 @@ erl_iconv(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[])
     outsize = inleft;
     outleft = outsize;
 
-    if (!enif_alloc_binary(env, outsize, &conv_bin))
+    if (!enif_alloc_binary(outsize, &conv_bin))
         return enif_make_tuple2(env, iconverl_atoms.error, iconverl_atoms.enomem);
 
     out = conv_bin.data;
@@ -134,14 +134,14 @@ erl_iconv(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[])
             outleft += outsize;
             outsize *= 2;
 
-            if (!enif_realloc_binary(env, &conv_bin, outsize)) {
-                enif_release_binary(env, &conv_bin);
+            if (!enif_realloc_binary(&conv_bin, outsize)) {
+                enif_release_binary(&conv_bin);
                 return enif_make_tuple2(env, iconverl_atoms.error, iconverl_atoms.enomem);
             }
 
             out = conv_bin.data + (outsize - outleft);
         } else {
-            enif_release_binary(env, &conv_bin);
+            enif_release_binary(&conv_bin);
 
             if      (errno == EILSEQ) { error = iconverl_atoms.eilseq;   }
             else if (errno == EINVAL) { error = iconverl_atoms.einval;   }
@@ -152,7 +152,7 @@ erl_iconv(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[])
     } while (rc != 0);
 
     if (outleft > 0)
-        enif_realloc_binary(env, &conv_bin, outsize - outleft);
+        enif_realloc_binary(&conv_bin, outsize - outleft);
 
     result = enif_make_binary(env, &conv_bin);
 
