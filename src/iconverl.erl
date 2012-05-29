@@ -20,44 +20,32 @@
 
 -module(iconverl).
 
-
 -on_load(load_nif/0).
-
 
 -export([open/2, conv/2, conv/3]).
 
-
 -opaque cd() :: binary().
-
+-export_type([cd/0]).
 
 %% -------------------------------------------------------------------------
 %% API
 %% -------------------------------------------------------------------------
 
+-spec open(string(), string()) -> cd().
+open(_To, _From) ->
+    erlang:nif_error(not_loaded).
 
--spec open/2 :: (string(), string()) -> cd().
+-spec conv(cd(), binary()) -> {ok, binary()} | {error, atom()}.
+conv(_CD, _Binary) ->
+    erlang:nif_error(not_loaded).
 
-open(To, From) ->
-    erlang:error(function_clause, [To, From]).
-
-
--spec conv/2 :: (cd(), binary()) -> {'ok', binary()} | {'error', atom()}.
-
-conv(CD, Binary) ->
-    erlang:error(function_clause, [CD, Binary]).
-
-
--spec conv/3 :: (string(), string(), binary()) -> {'ok', binary()} | {'error', atom()}.
-
+-spec conv(string(), string(), binary()) -> {ok, binary()} | {error, atom()}.
 conv(To, From, Binary) ->
     conv(open(To, From), Binary).
-
 
 %% -------------------------------------------------------------------------
 %% on_load callback
 %% -------------------------------------------------------------------------
 
-
 load_nif() ->
-    Path = filename:join(code:priv_dir(iconverl), "iconverl"),
-    erlang:load_nif(Path, 0).
+    erlang:load_nif(filename:join(code:priv_dir(iconverl), "iconverl"), 0).
