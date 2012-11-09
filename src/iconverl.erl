@@ -40,7 +40,7 @@ open(To, From) ->
     end.
 
 -spec conv({cd, string(), string()}, binary()) -> {ok, binary()} | {error, term()}.
-conv({To, From}, Binary) when is_list(To), is_list(From), is_binary(Binary) ->
+conv({cd, To, From}, Binary) when is_list(To), is_list(From), is_binary(Binary) ->
     conv(To, From, Binary).
 
 -spec conv(string(), string(), binary()) -> {ok, binary()} | {error, term()}.
