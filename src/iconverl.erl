@@ -24,24 +24,28 @@
 
 -export([open/2, conv/2, conv/3]).
 
--opaque cd() :: binary().
--export_type([cd/0]).
+-record(cd, {to, from}).
 
 %% -------------------------------------------------------------------------
 %% API
 %% -------------------------------------------------------------------------
 
--spec open(string(), string()) -> cd().
-open(_To, _From) ->
-    erlang:nif_error(not_loaded).
+-spec open(string(), string()) -> {cd, string(), string()}.
+open(To, From) ->
+    case conv(To, From, <<>>) of
+        {ok, _} ->
+            #cd{to=To, from=From};
+        {error, Reason} ->
+            {error, Reason}
+    end.
 
--spec conv(cd(), binary()) -> {ok, binary()} | {error, atom()}.
-conv(_CD, _Binary) ->
-    erlang:nif_error(not_loaded).
+-spec conv({cd, string(), string()}, binary()) -> {ok, binary()} | {error, term()}.
+conv(#cd{to=To, from=From}, Binary) when is_list(To), is_list(From), is_binary(Binary) ->
+    conv(To, From, Binary).
 
--spec conv(string(), string(), binary()) -> {ok, binary()} | {error, atom()}.
-conv(To, From, Binary) ->
-    conv(open(To, From), Binary).
+-spec conv(string(), string(), binary()) -> {ok, binary()} | {error, term()}.
+conv(_To, _From, _Binary) ->
+    erlang:nif_error(not_loaded).
 
 %% -------------------------------------------------------------------------
 %% on_load callback
