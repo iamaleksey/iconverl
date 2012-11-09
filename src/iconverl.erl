@@ -32,7 +32,12 @@
 
 -spec open(string(), string()) -> {cd, string(), string()}.
 open(To, From) ->
-    #cd{to=To, from=From}.
+    case conv(To, From, <<>>) of
+        {ok, _} ->
+            #cd{to=To, from=From};
+        {error, Reason} ->
+            {error, Reason}
+    end.
 
 -spec conv({cd, string(), string()}, binary()) -> {ok, binary()} | {error, term()}.
 conv({To, From}, Binary) when is_list(To), is_list(From), is_binary(Binary) ->
