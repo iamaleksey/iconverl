@@ -15,7 +15,7 @@ Usage
 
 <pre>
 1> CD = iconverl:open("ucs-2be", "utf-8").
-&lt;&lt;&gt;&gt;
+{cd, "ucs-2be", "utf-8"};
 2> iconverl:conv(CD, &lt;&lt;"text"&gt;&gt;).
 {ok,&lt;&lt;0,116,0,101,0,120,0,116&gt;&gt;}
 3> iconverl:conv(CD, &lt;&lt;"more text to convert"&gt;&gt;).
