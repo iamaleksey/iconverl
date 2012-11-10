@@ -20,6 +20,19 @@
  * THE SOFTWARE.
  */
 
+/*
+  ┌─────────────────────────────────────────────────────────────┐
+  │▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓│
+  │▓                                                           ▓│
+  │▓  ██  ██▀▀██  ██▀██  ███ ██ ██    ██ ██████ ██▀▀██ ██      ▓│
+  │▓  ██ ██    ▀ ██   ██ ██████  ██  ██  ██▄▄   ██▄▄██ ██      ▓│
+  │▓  ██ ██      ██   ██ ██ ███   ████   ██▀▀   ██▀██  ██   ▄  ▓│
+  │▓  ██  ██▄▄██  ██▄██  ██  ██    ██    ██████ ██  ██ ██▄▄██  ▓│
+  │▓                                                           ▓│
+  │▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓│
+  └─────────────────────────────────────────────────────────────┘
+*/
+
 #include "erl_nif.h"
 
 #include <iconv.h>
@@ -28,6 +41,12 @@
 #include <string.h>
 
 static ERL_NIF_TERM iconv_nif(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[]);
+static ERL_NIF_TERM make_error_tuple_from_string_errno(ErlNifEnv* env, const char *error);
+static ERL_NIF_TERM make_error_tuple_from_string(ErlNifEnv* env, const char *error);
+static ERL_NIF_TERM handle_close_after_error_from_string(ErlNifEnv* env, const char *error, iconv_t conv_desc);
+static ERL_NIF_TERM make_iconv_close_error_tuple(ErlNifEnv* env, ERL_NIF_TERM error, const char *close_error);
+static ERL_NIF_TERM handle_close_after_error(ErlNifEnv* env, ERL_NIF_TERM error, iconv_t conv_desc);
+static ERL_NIF_TERM make_error_tuple(ErlNifEnv* env, ERL_NIF_TERM error);
 
 static ErlNifFunc nif_funcs[] = {
     {"conv", 3, iconv_nif}
@@ -56,22 +75,14 @@ static ERL_NIF_TERM iconv_nif(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[
     assert(enif_get_list_length(env, argv[1], &from_len));
     to = (char *)enif_alloc(++to_len);
     if(to == NULL){
-        return enif_make_tuple2(
-            env,
-            enif_make_atom(env, "error"),
-            enif_make_atom(env, "to_enif_alloc_failed")
-        );
+        return make_error_tuple_from_string(env, "to_enif_alloc");
     }
-    
+
     from = (char *)enif_alloc(++from_len);
 
     if(from == NULL){
         enif_free(to);
-        return enif_make_tuple2(
-            env,
-            enif_make_atom(env, "error"),
-            enif_make_atom(env, "from_enif_alloc_failed")
-        );
+        return make_error_tuple_from_string(env, "from_enif_alloc");
     }
 
     res = enif_get_string(
@@ -81,27 +92,19 @@ static ERL_NIF_TERM iconv_nif(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[
         to_len,
         ERL_NIF_LATIN1
     );
-    
+
     if(res < 0){
         enif_free(to);
         enif_free(from);
-        return enif_make_tuple2(
-            env,
-            enif_make_atom(env, "error"),
-            enif_make_atom(env, "to_enif_get_string_truncation")
-        );       
+        return make_error_tuple_from_string(env, "to_enif_get_string_truncation");
     }
-    
+
     if(res == 0){
         enif_free(to);
         enif_free(from);
-        return enif_make_tuple2(
-            env,
-            enif_make_atom(env, "error"),
-            enif_make_atom(env, "to_enif_get_string_cannot_encode")
-        );       
+        return make_error_tuple_from_string(env, "to_enif_get_string_cannot_encode");
     }
-    
+
     res = enif_get_string(
         env,
         argv[1],
@@ -109,88 +112,38 @@ static ERL_NIF_TERM iconv_nif(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[
         from_len,
         ERL_NIF_LATIN1
     );
-    
+
     if(res < 0){
         enif_free(to);
         enif_free(from);
-        return enif_make_tuple2(
-            env,
-            enif_make_atom(env, "error"),
-            enif_make_atom(env, "from_enif_get_string_truncation")
-        );       
+        return make_error_tuple_from_string(env, "from_enif_get_string_truncation");
     }
-    
+
     if(res == 0){
         enif_free(to);
         enif_free(from);
-        return enif_make_tuple2(
-            env,
-            enif_make_atom(env, "error"),
-            enif_make_atom(env, "from_enif_get_string_cannot_encode")
-        );       
+        return make_error_tuple_from_string(env, "from_enif_get_string_cannot_encode");
     }
 
     conv_desc = iconv_open(to, from);
-    
+
     if(conv_desc == (iconv_t) -1){
         enif_free(to);
         enif_free(from);
-        
+
         switch(errno){
             case EINVAL:
-                return enif_make_tuple2(
-                    env,
-                    enif_make_atom(env, "error"),
-                    enif_make_atom(env, "unsupported")
-                );
+                return make_error_tuple_from_string(env, "unsupported");
             default:
-                return enif_make_tuple2(
-                    env,
-                    enif_make_atom(env, "error"),
-                    enif_make_int(env, errno)
-                );                
+                return make_error_tuple(env, enif_make_int(env, errno));
         }
     }
-    
+
     res = enif_inspect_binary(env, argv[2], &bin);
     if(res == 0){
         enif_free(to);
         enif_free(from);
-        res = iconv_close(conv_desc);
-        switch(res) {
-            case -1:
-                return enif_make_tuple2(
-                    env,
-                    enif_make_atom(env, "error"),
-                    enif_make_tuple2(
-                        env,
-                        enif_make_atom(
-                            env, 
-                            "not_binary_iconv_close_failed"
-                        ),
-                        enif_make_int(env, errno)
-                    )
-                );                  
-            case 0:    
-                return enif_make_tuple2(
-                    env,
-                    enif_make_atom(env, "error"),
-                    enif_make_atom(env, "not_a_binary")
-                );
-            default:
-                return enif_make_tuple2(
-                    env,
-                    enif_make_atom(env, "error"),
-                    enif_make_tuple2(
-                        env,
-                        enif_make_atom(
-                            env, 
-                            "not_binary_iconv_close_weird_return_value"
-                        ),
-                        enif_make_int(env, errno)
-                    )
-                );           
-        }
+        return handle_close_after_error_from_string(env, "not_a_byte_aligned_binary", conv_desc);
     }
 
 
@@ -198,48 +151,14 @@ static ERL_NIF_TERM iconv_nif(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[
         if(enif_alloc_binary(bin.size * input_multiplier, &out_bin) == 0){
             enif_free(to);
             enif_free(from);
-            res = iconv_close(conv_desc);
-            switch(res) {
-                case -1:
-                    return enif_make_tuple2(
-                        env,
-                        enif_make_atom(env, "error"),
-                        enif_make_tuple2(
-                            env,
-                            enif_make_atom(
-                                env, 
-                                "alloc_failed_iconv_close_failed"
-                            ),
-                            enif_make_int(env, errno)
-                        )
-                    );                  
-                case 0:    
-                    return enif_make_tuple2(
-                        env,
-                        enif_make_atom(env, "error"),
-                        enif_make_atom(env, "alloc_failed")
-                    );
-                default:
-                    return enif_make_tuple2(
-                        env,
-                        enif_make_atom(env, "error"),
-                        enif_make_tuple2(
-                            env,
-                            enif_make_atom(
-                                env, 
-                                "alloc_failed_iconv_close_weird_return_value"
-                            ),
-                            enif_make_int(env, errno)
-                        )
-                    );           
-            }
+            return handle_close_after_error_from_string(env, "enif_alloc_binary", conv_desc);
         }
 
         inbytesleft = bin.size;
         outbytesleft = out_bin.size;
         bin_buf = (char *)bin.data;
         out_bin_buf = (char *)out_bin.data;
-        
+
         ret = iconv(
             conv_desc,
             &bin_buf,
@@ -247,7 +166,7 @@ static ERL_NIF_TERM iconv_nif(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[
             &out_bin_buf,
             &outbytesleft
         );
-        
+
         if(ret == (size_t)-1){
             switch(errno){
                 case E2BIG:
@@ -257,223 +176,110 @@ static ERL_NIF_TERM iconv_nif(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[
                 case EILSEQ:
                     enif_free(to);
                     enif_free(from);
-                    res = iconv_close(conv_desc);
-                    switch(res) {
-                        case -1:
-                            return enif_make_tuple2(
-                                env,
-                                enif_make_atom(env, "error"),
-                                enif_make_tuple3(
-                                    env,
-                                    enif_make_atom(
-                                        env, 
-                                        "iconv_failed_iconv_close_failed"
-                                    ),
-                                    enif_make_atom(
-                                        env,
-                                        "eilseq"
-                                    ),
-                                    enif_make_int(env, errno)
-                                )
-                            );                  
-                        case 0:    
-                            return enif_make_tuple2(
-                                env,
-                                enif_make_atom(env, "error"),
-                                enif_make_atom(env, "eilseq")
-                            );
-                        default:
-                            return enif_make_tuple2(
-                                env,
-                                enif_make_atom(env, "error"),
-                                enif_make_tuple3(
-                                    env,
-                                    enif_make_atom(
-                                        env, 
-                                        "iconv_failed_iconv_close_weird_return_value"
-                                    ),
-                                    enif_make_atom(
-                                        env,
-                                        "eilseq"
-                                    ),
-                                    enif_make_int(env, errno)
-                                )
-                            );           
-                    }
+                    return handle_close_after_error_from_string(env, "eilseq", conv_desc);
                 case EINVAL:
                     enif_free(to);
                     enif_free(from);
-                    res = iconv_close(conv_desc);
-                    switch(res) {
-                        case -1:
-                            return enif_make_tuple2(
-                                env,
-                                enif_make_atom(env, "error"),
-                                enif_make_tuple3(
-                                    env,
-                                    enif_make_atom(
-                                        env, 
-                                        "iconv_failed_iconv_close_failed"
-                                    ),
-                                    enif_make_atom(
-                                        env,
-                                        "einval"
-                                    ),
-                                    enif_make_int(env, errno)
-                                )
-                            );                  
-                        case 0:    
-                            return enif_make_tuple2(
-                                env,
-                                enif_make_atom(env, "error"),
-                                enif_make_atom(env, "einval")
-                            );
-                        default:
-                            return enif_make_tuple2(
-                                env,
-                                enif_make_atom(env, "error"),
-                                enif_make_tuple3(
-                                    env,
-                                    enif_make_atom(
-                                        env, 
-                                        "iconv_failed_iconv_close_weird_return_value"
-                                    ),
-                                    enif_make_atom(
-                                        env,
-                                        "einval"
-                                    ),
-                                    enif_make_int(env, errno)
-                                )
-                            );           
-                    }
+                    return handle_close_after_error_from_string(env, "einval", conv_desc);
                 default:
                     enif_free(to);
                     enif_free(from);
-                    res = iconv_close(conv_desc);
-                    switch(res) {
-                        case -1:
-                            return enif_make_tuple2(
-                                env,
-                                enif_make_atom(env, "error"),
-                                enif_make_tuple2(
-                                    env,
-                                    enif_make_atom(
-                                        env, 
-                                        "iconv_failed_iconv_close_failed"
-                                    ),
-                                    enif_make_int(env, errno)
-                                )
-                            );                  
-                        case 0:    
-                            return enif_make_tuple2(
-                                env,
-                                enif_make_atom(env, "error"),
-                                enif_make_atom(env, "iconv_failed")
-                            );
-                        default:
-                            return enif_make_tuple2(
-                                env,
-                                enif_make_atom(env, "error"),
-                                enif_make_tuple2(
-                                    env,
-                                    enif_make_atom(
-                                        env, 
-                                        "iconv_failed_iconv_close_weird_return_value"
-                                    ),
-                                    enif_make_int(env, errno)
-                                )
-                            );           
-                    }
+                    return handle_close_after_error_from_string(env, "iconv", conv_desc);
             }
         }
-        break;
-    }
-    
-    //printf("%u %u %u\n", out_bin.size, outbytesleft, out_bin.size - outbytesleft);
-    
-    if(enif_alloc_binary(out_bin.size - outbytesleft, &final_bin) == 0){
+
+        if(enif_alloc_binary(out_bin.size - outbytesleft, &final_bin) == 0){
+            enif_release_binary(&out_bin);
+            enif_free(to);
+            enif_free(from);
+
+            return handle_close_after_error_from_string(env, "enif_alloc_binary", conv_desc);
+        }
+
+        memcpy(final_bin.data, out_bin.data, out_bin.size - outbytesleft);
         enif_release_binary(&out_bin);
         enif_free(to);
         enif_free(from);
         res = iconv_close(conv_desc);
         switch(res) {
             case -1:
-                return enif_make_tuple2(
-                    env,
-                    enif_make_atom(env, "error"),
-                    enif_make_tuple2(
-                        env,
-                        enif_make_atom(
-                            env, 
-                            "alloc_binary_iconv_close_failed"
-                        ),
-                        enif_make_int(env, errno)
-                    )
-                );
-                                 
+                return make_error_tuple_from_string_errno(env, "iconv_close");
             case 0:
-                return enif_make_tuple2(
-                    env,
-                    enif_make_atom(env, "error"),
-                    enif_make_atom(env, "alloc_binary")
-                );
+                break;
 
             default:
-                return enif_make_tuple2(
-                    env,
-                    enif_make_atom(env, "error"),
-                    enif_make_tuple2(
-                        env,
-                        enif_make_atom(
-                            env, 
-                            "alloc_binary_iconv_close_weird_return_value"
-                        ),
-                        enif_make_int(env, errno)
-                    )
-                );           
+                return make_error_tuple_from_string_errno(env, "iconv_close_weird_return_value");
         }
-    }
 
-    memcpy(final_bin.data, out_bin.data, out_bin.size - outbytesleft);
-    enif_release_binary(&out_bin);
-    enif_free(to);
-    enif_free(from);
-    res = iconv_close(conv_desc);
-    switch(res) {
-        case -1:
-            return enif_make_tuple2(
-                env,
-                enif_make_atom(env, "error"),
-                enif_make_tuple2(
-                    env,
-                    enif_make_atom(
-                        env, 
-                        "iconv_close_failed"
-                    ),
-                    enif_make_int(env, errno)
-                )
-            );
-                             
-        case 0:
-            break;
-
-        default:
-            return enif_make_tuple2(
-                env,
-                enif_make_atom(env, "error"),
-                enif_make_tuple2(
-                    env,
-                    enif_make_atom(
-                        env, 
-                        "iconv_close_weird_return_value"
-                    ),
-                    enif_make_int(env, errno)
-                )
-            );           
+        break;
     }
 
     return enif_make_tuple2(env, enif_make_atom(env, "ok"), enif_make_binary(env, &final_bin));
+
 }
 
+static ERL_NIF_TERM make_error_tuple_from_string_errno(ErlNifEnv* env, const char *error)
+{
+    return make_error_tuple(
+        env,
+        enif_make_tuple2(
+            env,
+            enif_make_atom(env, error),
+            enif_make_int(env, errno)
+        )
+    );
+}
+
+static ERL_NIF_TERM make_error_tuple_from_string(ErlNifEnv* env, const char *error)
+{
+    return make_error_tuple(env, enif_make_atom(env, error));
+}
+
+static ERL_NIF_TERM make_error_tuple(ErlNifEnv* env, ERL_NIF_TERM error)
+{
+    return enif_make_tuple2(env, enif_make_atom(env, "error"), error);
+}
+
+static ERL_NIF_TERM make_iconv_close_error_tuple(ErlNifEnv* env, ERL_NIF_TERM error, const char *close_error)
+{
+    return make_error_tuple(
+        env,
+        enif_make_tuple2(
+            env,
+            error,
+            enif_make_tuple2(
+                env,
+                enif_make_atom(
+                    env,
+                    close_error
+                ),
+                enif_make_int(env, errno)
+            )
+        )
+    );
+}
+
+static ERL_NIF_TERM handle_close_after_error_from_string(ErlNifEnv* env, const char *error, iconv_t conv_desc)
+{
+    return handle_close_after_error(env, enif_make_atom(env, error), conv_desc);
+}
+
+static ERL_NIF_TERM handle_close_after_error(ErlNifEnv* env, ERL_NIF_TERM error, iconv_t conv_desc)
+{
+    int res;
+
+    res = iconv_close(conv_desc);
+
+    switch(res){
+    case -1:
+        return make_iconv_close_error_tuple(env, error, "iconv_close");
+    case 0:
+        return make_error_tuple(env, error);
+    default:
+        break;
+    }
+
+    return make_iconv_close_error_tuple(env, error, "iconv_close_weird_return_value");
+}
 
 ERL_NIF_INIT(iconverl, nif_funcs, NULL, NULL, NULL, NULL);
