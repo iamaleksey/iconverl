@@ -47,6 +47,7 @@ static ERL_NIF_TERM handle_close_after_error_from_string(ErlNifEnv* env, const c
 static ERL_NIF_TERM make_iconv_close_error_tuple(ErlNifEnv* env, ERL_NIF_TERM error, const char *close_error);
 static ERL_NIF_TERM handle_close_after_error(ErlNifEnv* env, ERL_NIF_TERM error, iconv_t conv_desc);
 static ERL_NIF_TERM make_error_tuple(ErlNifEnv* env, ERL_NIF_TERM error);
+static int handle_upgrade(ErlNifEnv* env, void** priv_data, void** old_priv_data, ERL_NIF_TERM load_info);
 
 static ErlNifFunc nif_funcs[] = {
     {"conv", 3, iconv_nif}
@@ -282,4 +283,9 @@ static ERL_NIF_TERM handle_close_after_error(ErlNifEnv* env, ERL_NIF_TERM error,
     return make_iconv_close_error_tuple(env, error, "iconv_close_weird_return_value");
 }
 
-ERL_NIF_INIT(iconverl, nif_funcs, NULL, NULL, NULL, NULL);
+static int handle_upgrade(ErlNifEnv* env, void** priv_data, void** old_priv_data, ERL_NIF_TERM load_info)
+{
+    return 0;
+}
+
+ERL_NIF_INIT(iconverl, nif_funcs, NULL, NULL, handle_upgrade, NULL);
