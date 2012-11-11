@@ -18,8 +18,6 @@ I needed access to iconv from glibc. After trying the very buggy erlang-iconv (i
 
 This prompted me to write a replacement. I tried to get it pulled by the original author since it implements an almost identical interface. But he decided that there was no bug since he couldn't reproduce it on his system!? This has now occured on two completely different environments (Ubuntu 12.04 LTS 64bit and Gentoo). 
 
-So if you are like me and don't like to have your super fault-tolerant production systems running buggy code you'll run this module and not the other two alternatives.
-
 Compilation
 ===========
 
