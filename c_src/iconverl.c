@@ -43,7 +43,7 @@ static void
 gc_iconv_cd(ErlNifEnv *env, void *cd)
 {
     iconv_t icd = ((iconv_cd *) cd)->cd;
-    if ((int) icd != -1)
+    if (icd != (iconv_t) -1)
         iconv_close(icd);
 }
 
