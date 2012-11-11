@@ -40,7 +40,7 @@ open(To, From) ->
     end.
 
 -spec conv({cd, string(), string()}, binary()) -> {ok, binary()} | {error, term()}.
-conv(#cd{to=To, from=From}, Binary) when is_list(To), is_list(From), is_binary(Binary) ->
+conv(#cd{to=To, from=From}, Binary) when is_list(To), is_list(From), is_binary(Binary), byte_size(Binary) =< 134217728 ->
     conv(To, From, Binary).
 
 -spec conv(string(), string(), binary()) -> {ok, binary()} | {error, term()}.
