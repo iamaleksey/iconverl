@@ -42,7 +42,9 @@ static struct {
 static void
 gc_iconv_cd(ErlNifEnv *env, void *cd)
 {
-    iconv_close(((iconv_cd *) cd)->cd);
+    iconv_t icd = ((iconv_cd *) cd)->cd;
+    if ((int) icd != -1)
+        iconv_close(icd);
 }
 
 static int
