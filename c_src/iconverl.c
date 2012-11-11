@@ -69,9 +69,10 @@ static ERL_NIF_TERM iconv_nif(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[
     size_t inbytesleft;
     size_t outbytesleft;
     ErlNifBinary out_bin;
-    ErlNifBinary final_bin;
+    ERL_NIF_TERM final_bin;
     int input_multiplier = 5;
 
+    assert(argc == 3);
     assert(enif_get_list_length(env, argv[0], &to_len));
     assert(enif_get_list_length(env, argv[1], &from_len));
     to = (char *)enif_alloc(++to_len);
@@ -189,7 +190,7 @@ static ERL_NIF_TERM iconv_nif(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[
             }
         }
 
-        if(enif_alloc_binary(out_bin.size - outbytesleft, &final_bin) == 0){
+        if(enif_realloc_binary(&out_bin, out_bin.size - outbytesleft) == 0){
             enif_release_binary(&out_bin);
             enif_free(to);
             enif_free(from);
@@ -197,8 +198,8 @@ static ERL_NIF_TERM iconv_nif(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[
             return handle_close_after_error_from_string(env, "enif_alloc_binary", conv_desc);
         }
 
-        memcpy(final_bin.data, out_bin.data, out_bin.size - outbytesleft);
-        enif_release_binary(&out_bin);
+        final_bin = enif_make_binary(env, &out_bin);
+
         enif_free(to);
         enif_free(from);
         res = iconv_close(conv_desc);
@@ -215,7 +216,7 @@ static ERL_NIF_TERM iconv_nif(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[
         break;
     }
 
-    return enif_make_tuple2(env, enif_make_atom(env, "ok"), enif_make_binary(env, &final_bin));
+    return enif_make_tuple2(env, enif_make_atom(env, "ok"), final_bin);
 
 }
 
@@ -288,4 +289,4 @@ static int handle_upgrade(ErlNifEnv* env, void** priv_data, void** old_priv_data
     return 0;
 }
 
-ERL_NIF_INIT(iconverl, nif_funcs, NULL, NULL, handle_upgrade, NULL);
+ERL_NIF_INIT(iconverl, nif_funcs, NULL, NULL, handle_upgrade, NULL)
