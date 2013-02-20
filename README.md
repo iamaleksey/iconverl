@@ -40,3 +40,8 @@ Usage
 {ok,&lt;&lt;0,0,0,99,0,0,0,111,0,0,0,110,0,0,0,118,0,0,0,101,0,
       0,0,114,0,0,0,...&gt;&gt;}
 </pre>
+
+Or using the standard iconv interface (recommended):
+<pre>
+1&gt; l(iconv).<br />{module,iconv}<br />2&gt; {ok, Cd} = iconv:open("latin1//translit", "utf-8").<br />{ok,{cd,"latin1//translit","utf-8"}}<br />3&gt; iconv:conv(Cd, unicode:characters_to_binary("Test&forall;", utf8)).<br />{ok,&lt;&lt;"Test?"&gt;&gt;}<br />4&gt; iconv:close(Cd).<br />ok<br />5&gt;
+</pre>
