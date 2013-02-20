@@ -1,6 +1,6 @@
 {application, iconverl,
  [{description, "A simple iconv nif wrapper."},
-  {vsn, "2.1"},
+  {vsn, "2.2"},
   {applications, [kernel, stdlib]},
   {registered, []}
 ]}.
