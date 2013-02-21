@@ -163,7 +163,9 @@ static ERL_NIF_TERM iconv_iconv_nif(ErlNifEnv* env, int argc, const ERL_NIF_TERM
     size_t outbytesleft;
 
     assert(argc == 2);
-    assert(enif_get_resource(env, argv[0], iconv_cd_type, (void **)&cd_ptr));
+    if(!enif_get_resource(env, argv[0], iconv_cd_type, (void **)&cd_ptr)) {
+        return make_error_tuple_from_string(env, "bad_resource");
+    }
     assert(cd_ptr != NULL);
 
     res = enif_inspect_binary(env, argv[1], &in_bin);
@@ -235,7 +237,9 @@ static ERL_NIF_TERM iconv_reset_nif(ErlNifEnv* env, int argc, const ERL_NIF_TERM
     size_t ret;
 
     assert(argc == 1);
-    assert(enif_get_resource(env, argv[0], iconv_cd_type, (void **)&cd_ptr));
+    if(!enif_get_resource(env, argv[0], iconv_cd_type, (void **)&cd_ptr)) {
+        return make_error_tuple_from_string(env, "bad_resource");
+    }
     assert(cd_ptr != NULL);
 
     ret = iconv(*cd_ptr, NULL, NULL, NULL, NULL);
