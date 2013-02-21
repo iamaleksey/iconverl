@@ -1,4 +1,4 @@
-%%% Copyright (c) 2010 Aleksey Yeschenko <aleksey@yeschenko.com>
+%%% Copyright (c) 2013 Eric des Courtis <eric.des.courtis@benbria.ca>
 %%%
 %%% Permission is hereby granted, free of charge, to any person obtaining a copy
 %%% of this software and associated documentation files (the "Software"), to deal
@@ -22,29 +22,30 @@
 
 -on_load(load_nif/0).
 
--export([open/2, conv/2, conv/3]).
+-export([open/2, iconv/2, reset/1]).
 
--record(cd, {to, from}).
+-opaque cd() :: binary().
+-export_type([cd/0]).
 
 %% -------------------------------------------------------------------------
 %% API
 %% -------------------------------------------------------------------------
+-spec open(string(), string()) -> {ok, cd()}.
+open(_To, _From) ->
+    erlang:nif_error(not_loaded).
 
--spec open(string(), string()) -> {cd, string(), string()}.
-open(To, From) ->
-    case conv(To, From, <<>>) of
-        {ok, _} ->
-            #cd{to=To, from=From};
-        {error, Reason} ->
-            {error, Reason}
-    end.
+-spec iconv(cd(), binary()) -> 
+    {ok, e2big, integer(), binary()} |
+    {ok, eilseq, integer(), binary()} |
+    {ok, einval, integer(), binary()} |
+    {ok, integer(), binary()} |
+    {error, atom()} | 
+    {error, integer()}.
+iconv(_Cd, _Binary) ->
+    erlang:nif_error(not_loaded).
 
--spec conv({cd, string(), string()}, binary()) -> {ok, binary()} | {error, term()}.
-conv(#cd{to=To, from=From}, Binary) when is_list(To), is_list(From), is_binary(Binary), byte_size(Binary) =< 134217728 ->
-    conv(To, From, Binary).
-
--spec conv(string(), string(), binary()) -> {ok, binary()} | {error, term()}.
-conv(_To, _From, _Binary) ->
+-spec reset(cd()) -> ok | {error, integer()}.
+reset(_Cd) ->
     erlang:nif_error(not_loaded).
 
 %% -------------------------------------------------------------------------
