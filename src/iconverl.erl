@@ -55,12 +55,12 @@ chunk(CD, Data, Acc) when is_binary(Data), is_list(Acc) ->
             chunk(
                 CD,
                 binary:part(Data, Offset, byte_size(Data) - Offset),
-                Acc ++ [OutputData]
+                [Acc | OutputData]
             );
         {ok, einval, _Offset, OutputData} ->
-            chunk(CD, <<>>, Acc ++ [OutputData], more);
+            chunk(CD, <<>>, [Acc | OutputData], more);
         {ok, _Offset, OutputData} -> 
-            chunk(CD, <<>>, Acc ++ [OutputData], done);
+            chunk(CD, <<>>, [Acc | OutputData], done);
         Other ->
             Other
     end.
