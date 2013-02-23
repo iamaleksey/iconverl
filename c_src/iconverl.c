@@ -145,7 +145,7 @@ static ERL_NIF_TERM iconv_open_nif(ErlNifEnv* env, int argc, const ERL_NIF_TERM 
     conv_desc_ref = (iconv_t *)enif_alloc_resource(iconv_cd_type, sizeof(iconv_t));
     *conv_desc_ref = conv_desc;
 
-    return enif_make_tuple2(env, enif_make_atom(env, "ok"), enif_make_resource(env, conv_desc_ref));
+    return enif_make_resource(env, conv_desc_ref);
 }
 
 

@@ -6,7 +6,12 @@
 -spec open(string() | binary(), string() | binary()) -> {ok, term()}.
 open(ToCode, FromCode) when is_list(ToCode) or is_binary(ToCode),
     is_list(FromCode) or is_binary(FromCode) ->
-    iconverl:open(ToCode, FromCode).
+    case iconverl:open(ToCode, FromCode) of
+        T when is_tuple(T) ->
+            T;
+        X ->
+            {ok, X}
+    end.
 
 -spec conv(term(), binary()) -> {ok, binary} | {error, atom()}.
 conv(Cd, Input) ->
