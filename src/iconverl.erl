@@ -76,6 +76,8 @@ conv(CD, Data) when is_binary(Data) or is_list(Data)  ->
             {ok, iolist_to_binary(Result)};
         {more, _Result} ->
             {error, einval};
+        {ok,eilseq, _, _} ->
+            {error, eilseq};
         {error, Reason} ->
             {error, Reason};
         _ ->
