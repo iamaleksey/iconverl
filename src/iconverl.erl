@@ -88,10 +88,10 @@ conv(CD, Data) when is_binary(Data) or is_list(Data)  ->
 conv(To, From, Data) when is_list(To) or is_binary(To),
     is_list(From) or is_binary(From), is_list(Data) or is_binary(Data) ->
     case open(To, From) of
-        {ok, CD} ->
-            conv(CD, Data);
-        Other ->
-            Other
+        Error when is_tuple(Error) ->
+            Error;
+        CD ->
+            conv(CD, Data)
     end.
 
 
