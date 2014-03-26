@@ -69,6 +69,12 @@ load(ErlNifEnv *env, void **priv, ERL_NIF_TERM load_info)
     return 0;
 }
 
+static int
+upgrade(ErlNifEnv* env, void** priv_data, void** old_priv_data, ERL_NIF_TERM load_info)
+{
+    return 0;
+}
+
 static ERL_NIF_TERM
 erl_iconv_open(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[])
 {
@@ -166,4 +172,4 @@ static ErlNifFunc nif_funcs[] = {
     {"conv", 2, erl_iconv}
 };
 
-ERL_NIF_INIT(iconverl, nif_funcs, load, NULL, NULL, NULL)
+ERL_NIF_INIT(iconverl, nif_funcs, load, NULL, upgrade, NULL)
